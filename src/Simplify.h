@@ -480,15 +480,16 @@ namespace Simplify
 
     void update_mesh(int iteration, int thread)
 	{
+        auto& tris = *triangles[thread];
 		if(iteration>0) // compact triangles
 		{
 			int dst=0;
-            loopi(0,triangles[thread]->size())
-            if((*triangles[thread])[i].deleted == 0 || (*triangles[thread])[i].deleted == -1)
+            loopi(0,tris.size())
+            if(tris[i].deleted == 0 || tris[i].deleted == -1)
 			{
-                (*triangles[thread])[dst++]=(*triangles[thread])[i];
+                tris[dst++]=tris[i];
 			}
-            triangles[thread]->resize(dst);
+            tris.resize(dst);
 		}
 		//
 		// Init Quadrics by Plane & Edge Errors
@@ -497,59 +498,60 @@ namespace Simplify
 		// recomputing during the simplification is not required,
 		// but mostly improves the result for closed meshes
 		//
+        auto& verts = *vertices[thread];
 		if( iteration == 0 )
 		{
-            loopi(0,vertices[thread]->size())
-            (*vertices[thread])[i].q=SymetricMatrix(0.0);
+            loopi(0,verts.size())
+                verts[i].q=SymetricMatrix(0.0);
 
-            loopi(0,triangles[thread]->size())
+            loopi(0,tris.size())
 			{
-                Triangle &t=(*triangles[thread])[i];
+                Triangle &t=tris[i];
                 vec3f n,p[3];
-                loopj(0,3) p[j]=(*vertices[thread])[t.v[j]].p;
+                loopj(0,3) p[j]=verts[t.v[j]].p;
 				n.cross(p[1]-p[0],p[2]-p[0]);
 				n.normalize();
 				t.n=n;
-                loopj(0,3) (*vertices[thread])[t.v[j]].q =
-                    (*vertices[thread])[t.v[j]].q+SymetricMatrix(n.x,n.y,n.z,-n.dot(p[0]));
+                loopj(0,3) verts[t.v[j]].q =
+                    verts[t.v[j]].q+SymetricMatrix(n.x,n.y,n.z,-n.dot(p[0]));
 			}
-            loopi(0,triangles[thread]->size())
+            loopi(0,tris.size())
 			{
 				// Calc Edge Error
-                Triangle &t=(*triangles[thread])[i];vec3f p;
+                Triangle &t=tris[i];vec3f p;
                 loopj(0,3) t.err[j]=calculate_error(t.v[j],t.v[(j+1)%3],p,thread);
 				t.err[3]=min(t.err[0],min(t.err[1],t.err[2]));
 			}
 		}
 
 		// Init Reference ID list
-        loopi(0,vertices[thread]->size())
+        loopi(0,verts.size())
 		{
-            (*vertices[thread])[i].tstart=0;
-            (*vertices[thread])[i].tcount=0;
+            verts[i].tstart=0;
+            verts[i].tcount=0;
 		}
-        loopi(0,triangles[thread]->size())
+        loopi(0,tris.size())
 		{
-            Triangle &t=(*triangles[thread])[i];
-            loopj(0,3) (*vertices[thread])[t.v[j]].tcount++;
+            Triangle &t=tris[i];
+            loopj(0,3) verts[t.v[j]].tcount++;
 		}
 		int tstart=0;
-        loopi(0,vertices[thread]->size())
+        loopi(0,verts.size())
 		{
-            Vertex &v=(*vertices[thread])[i];
+            Vertex &v=verts[i];
 			v.tstart=tstart;
 			tstart+=v.tcount;
 			v.tcount=0;
 		}
 
 		// Write References
-        refs[thread]->resize(triangles[thread]->size()*3);
-        loopi(0,triangles[thread]->size())
+        refs[thread]->resize(tris.size()*3);
+        loopi(0,tris.size())
 		{
-            Triangle &t=(*triangles[thread])[i];
+            Triangle &t=tris[i];
 			loopj(0,3)
 			{
-                Vertex &v=(*vertices[thread])[t.v[j]];
+                Vertex &v=verts[t.v[j]];
                 (*refs[thread])[v.tstart+v.tcount].tid=i;
                 (*refs[thread])[v.tstart+v.tcount].tvertex=j;
 				v.tcount++;
@@ -561,18 +563,18 @@ namespace Simplify
 		{
 			std::vector<int> vcount,vids;
 
-            loopi(0,vertices[thread]->size())
-                (*vertices[thread])[i].border=0;
+            loopi(0,verts.size())
+                verts[i].border=0;
 
-            loopi(0,vertices[thread]->size())
+            loopi(0,verts.size())
 			{
-                Vertex &v=(*vertices[thread])[i];
+                Vertex &v=verts[i];
 				vcount.clear();
 				vids.clear();
 				loopj(0,v.tcount)
 				{
                     int k=(*refs[thread])[v.tstart+j].tid;
-                    Triangle &t=(*triangles[thread])[k];
+                    Triangle &t=tris[k];
 					loopk(0,3)
 					{
 						int ofs=0,id=t.v[k];
@@ -591,7 +593,7 @@ namespace Simplify
 					}
 				}
 				loopj(0,vcount.size()) if(vcount[j]==1)
-                    (*vertices[thread])[vids[j]].border=1;
+                    verts[vids[j]].border=1;
 			}
 		}
 	}
