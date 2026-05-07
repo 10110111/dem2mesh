@@ -293,8 +293,8 @@ namespace Simplify
 	// Helper functions
 	double vertex_error(SymetricMatrix q, double x, double y, double z);
     double calculate_error(int id_v1, int id_v2, vec3f &p_result, int thread);
-    bool flipped(vec3f p,int i0,int i1,Vertex &v0,Vertex &v1,std::vector<int> &deleted,int thread);
-    void update_triangles(int i0,Vertex &v,std::vector<int> &deleted,int &deleted_triangles, int thread);
+    bool flipped(vec3f p,int i0,int i1,const Vertex &v0,const Vertex &v1,std::vector<int> &deleted,int thread);
+    void update_triangles(int i0,const Vertex &v,const std::vector<int> &deleted,int &deleted_triangles, int thread);
     void update_mesh(int iteration, int thread);
     void compact_mesh(int thread);
 
@@ -419,12 +419,12 @@ namespace Simplify
 
 	// Check if a triangle flips when this edge is removed
 
-    bool flipped(vec3f p,int i0,int i1,Vertex &v0,Vertex &v1,std::vector<int> &deleted, int thread)
+    bool flipped(vec3f p,int i0,int i1,const Vertex &v0,const Vertex &v1,std::vector<int> &deleted, int thread)
 	{
 
 		loopk(0,v0.tcount)
 		{
-            Triangle &t=(*triangles[thread])[(*refs[thread])[v0.tstart+k].tid];
+            const Triangle &t=(*triangles[thread])[(*refs[thread])[v0.tstart+k].tid];
             if(t.deleted == 1)continue;
 
             int s=(*refs[thread])[v0.tstart+k].tvertex;
@@ -451,12 +451,12 @@ namespace Simplify
 
 	// Update triangle connections and edge error after a edge is collapsed
 
-    void update_triangles(int i0,Vertex &v,std::vector<int> &deleted,int &deleted_triangles, int thread)
+    void update_triangles(int i0,const Vertex &v,const std::vector<int> &deleted,int &deleted_triangles, int thread)
 	{
 		vec3f p;
 		loopk(0,v.tcount)
 		{
-            Ref &r=(*refs[thread])[v.tstart+k];
+            const Ref &r=(*refs[thread])[v.tstart+k];
             Triangle &t=(*triangles[thread])[r.tid];
             if(t.deleted == 1)continue;
 
