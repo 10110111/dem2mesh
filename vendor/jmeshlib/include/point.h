@@ -70,6 +70,8 @@ class Point
  //! Creates a new point with coordinates (a,b,c).
  Point(const coord& a, const coord& b, const coord& c) {x = a; y = b; z = c; info = NULL;}
 
+ Point& operator=(const Point& p) {x = p.x; y = p.y; z = p.z; info = p.info; return *this;}
+
  //! Set the coordinates to (a,b,c).
  void	setValue(const coord& a, const coord& b, const coord& c) {x = a; y = b; z = c;}
 
