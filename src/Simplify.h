@@ -27,10 +27,10 @@
 #include <math.h>
 #include <float.h> //FLT_EPSILON, DBL_EPSILON
 
-#define loopi(start_l,end_l) for ( int i=start_l;i<end_l;++i )
-#define loopi(start_l,end_l) for ( int i=start_l;i<end_l;++i )
-#define loopj(start_l,end_l) for ( int j=start_l;j<end_l;++j )
-#define loopk(start_l,end_l) for ( int k=start_l;k<end_l;++k )
+#define loopi(start_l,end_l) for ( int i=start_l;i<int(end_l);++i )
+#define loopi(start_l,end_l) for ( int i=start_l;i<int(end_l);++i )
+#define loopj(start_l,end_l) for ( int j=start_l;j<int(end_l);++j )
+#define loopk(start_l,end_l) for ( int k=start_l;k<int(end_l);++k )
 
 struct vector3
 {
@@ -47,6 +47,9 @@ struct vec3f
 	// { vec3f b ; b.x = a.x; b.y = a.y; b.z = a.z; return b;}
 
     inline vec3f( vector3 a )
+	 { x = a.x; y = a.y; z = a.z; }
+
+    inline vec3f( const vec3f& a )
 	 { x = a.x; y = a.y; z = a.z; }
 
     inline vec3f( const double X, const double Y, const double Z )
@@ -177,16 +180,9 @@ struct vec3f
 		return (double)sqrt(x*x + y*y + z*z);
 	}
 
-    inline vec3f normalize( double desired_length = 1 )
+    inline vec3f normalize()
     {
 		double square = sqrt(x*x + y*y + z*z);
-		/*
-		if (square <= 0.00001f )
-		{
-			x=1;y=0;z=0;
-			return *this;
-		}*/
-		//double len = desired_length / square;
 		x/=square;y/=square;z/=square;
 
 		return *this;
@@ -564,7 +560,7 @@ namespace Simplify
 		// Identify boundary : vertices[].border=0,1
 		if( iteration == 0 )
 		{
-			std::vector<int> vcount,vids;
+			std::vector<unsigned> vcount,vids;
 
             loopi(0,verts.size())
                 verts[i].border=0;
@@ -580,7 +576,7 @@ namespace Simplify
                     Triangle &t=tris[k];
 					loopk(0,3)
 					{
-						int ofs=0,id=t.v[k];
+						unsigned ofs=0,id=t.v[k];
 						while(ofs<vcount.size())
 						{
 							if(vids[ofs]==id)break;
