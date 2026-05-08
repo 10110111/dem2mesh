@@ -293,7 +293,7 @@ namespace Simplify
 	// Helper functions
 	double vertex_error(SymetricMatrix q, double x, double y, double z);
     double calculate_error(int id_v1, int id_v2, vec3f &p_result, int thread);
-    bool flipped(vec3f p,int i0,int i1,const Vertex &v0,const Vertex &v1,std::vector<int> &deleted,int thread);
+    bool flipped(vec3f p,int i1,const Vertex &v0,std::vector<int> &deleted,int thread);
     void update_triangles(int i0,const Vertex &v,const std::vector<int> &deleted,int &deleted_triangles, int thread);
     void update_mesh(int iteration, int thread);
     void compact_mesh(int thread);
@@ -383,9 +383,9 @@ namespace Simplify
 					deleted0.resize(v0.tcount); // normals temporarily
 					deleted1.resize(v1.tcount); // normals temporarily
 					// dont remove if flipped
-                    if( flipped(p,i0,i1,v0,v1,deleted0,thread) ) continue;
+                    if( flipped(p,i1,v0,deleted0,thread) ) continue;
 
-                    if( flipped(p,i1,i0,v1,v0,deleted1,thread) ) continue;
+                    if( flipped(p,i0,v1,deleted1,thread) ) continue;
 
 					// not flipped, so remove edge
 					v0.p=p;
@@ -419,7 +419,7 @@ namespace Simplify
 
 	// Check if a triangle flips when this edge is removed
 
-    bool flipped(vec3f p,int i0,int i1,const Vertex &v0,const Vertex &v1,std::vector<int> &deleted, int thread)
+    bool flipped(vec3f p,int i1,const Vertex &v0,std::vector<int> &deleted, int thread)
 	{
 
 		loopk(0,v0.tcount)
