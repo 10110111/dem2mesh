@@ -67,13 +67,13 @@ struct vec3f
     inline vec3f v3 () const
     { return vec3f( x , y, z ); }
 
-    inline vec3f operator = ( const vector3 a )
+    inline vec3f operator = ( const vector3& a )
     { x=a.x;y=a.y;z=a.z;return *this; }
 
-    inline vec3f operator = ( const vec3f a )
+    inline vec3f operator = ( const vec3f& a )
     { x=a.x;y=a.y;z=a.z;return *this; }
 
-    inline vec3f operator / ( const vec3f a ) const
+    inline vec3f operator / ( const vec3f& a ) const
     { return vec3f( x / a.x, y / a.y, z / a.z ); }
 
     inline vec3f operator - ( const vec3f& a ) const
