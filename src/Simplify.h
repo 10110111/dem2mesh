@@ -439,7 +439,10 @@ namespace Simplify
 			}
             vec3f d1 = (*vertices[thread])[id1].p-p; d1.normalize();
             vec3f d2 = (*vertices[thread])[id2].p-p; d2.normalize();
-			if(fabs(d1.dot(d2))>0.999) return true;
+            vec3f proj1(d1.x, d1.y, 0), proj2(d2.x, d2.y, 0);
+            proj1.normalize();
+            proj2.normalize();
+			if(fabs(proj1.dot(proj2))>0.999) return true;
 			vec3f n;
 			n.cross(d1,d2);
 			n.normalize();
