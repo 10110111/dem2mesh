@@ -492,13 +492,16 @@ int main(int argc, char **argv) {
                 unsigned int cols = blockSizeX + blockXPad;
                 unsigned int rows = blockSizeY + blockYPad;
 
+                // Freeze border points only if multiple blocks are used
+                const int maybeFreezeMarker = qtreeLevels > 0 ? -1 : 0;
                 for (unsigned int y = 0; y < rows - 1; y++){
                     for (unsigned int x = 0; x < cols - 1; x++){
                         Simplify::Triangle t1;
                         t1.v[0] = cols * (y + 1) + x;
                         t1.v[1] = cols * y + x + 1;
                         t1.v[2] = cols * y + x;
-                        if (y == 0 || x == 0 || y == rows - 2 || x == cols - 2) t1.deleted = -1; // freeze
+                        if (y == 0 || x == 0 || y == rows - 2 || x == cols - 2)
+                            t1.deleted = maybeFreezeMarker;
                         else t1.deleted = 0;
 
                         if (!hasNoData ||
@@ -512,7 +515,8 @@ int main(int argc, char **argv) {
                         t2.v[0] = cols * (y + 1) + x;
                         t2.v[1] = cols * (y + 1) + x + 1;
                         t2.v[2] = cols * y + x + 1;
-                        if (y == 0 || x == 0 || y == rows - 2 || x == cols - 2) t2.deleted = -1; // freeze
+                        if (y == 0 || x == 0 || y == rows - 2 || x == cols - 2)
+                            t2.deleted = maybeFreezeMarker;
                         else t2.deleted = 0;
 
                         if (!hasNoData ||
