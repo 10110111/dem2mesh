@@ -644,8 +644,10 @@ namespace Simplify
     {
         // compute interpolated vertex
 
-        SymetricMatrix q = (*vertices[thread])[id_v1].q + (*vertices[thread])[id_v2].q;
-        bool   border = (*vertices[thread])[id_v1].border & (*vertices[thread])[id_v2].border;
+        const auto& v1 = (*vertices[thread])[id_v1];
+        const auto& v2 = (*vertices[thread])[id_v2];
+        SymetricMatrix q = v1.q + v2.q;
+        bool   border = v1.border & v2.border;
         double error=0;
         double det = q.det(0, 1, 2, 1, 4, 5, 2, 5, 7);
         if ( det != 0 && !border )
@@ -661,8 +663,8 @@ namespace Simplify
         else
         {
             // det = 0 -> try to find best result
-            vec3f p1=(*vertices[thread])[id_v1].p;
-            vec3f p2=(*vertices[thread])[id_v2].p;
+            vec3f p1=v1.p;
+            vec3f p2=v2.p;
             vec3f p3=(p1+p2)/2;
             double error1 = vertex_error(q, p1.x,p1.y,p1.z);
             double error2 = vertex_error(q, p2.x,p2.y,p2.z);
