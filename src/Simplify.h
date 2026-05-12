@@ -331,7 +331,7 @@ namespace Simplify
         int triangle_count=triangles[thread]->size();
         //int iteration = 0;
         //loop(iteration,0,100)
-        for (int iteration = 0; iteration < 100; iteration ++)
+        for (int iteration = 0; iteration < 1000; iteration ++)
         {
             if(triangle_count-deleted_triangles<=target_count)break;
             //
