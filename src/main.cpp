@@ -334,7 +334,7 @@ void readBin(const std::string &filename, int blockX, int blockY, int thread){
             }
         }
 
-        Simplify::Vertex v;
+        Simplify::Vertex v{};
         v.p.x = vertices[0];
         v.p.y = vertices[1];
         v.p.z = vertices[2];
@@ -562,7 +562,7 @@ int main(int argc, char **argv) {
                     omp_unset_lock(&readLock);
 
                     for (int x = 0; x < blockSizeX + blockXPad; x++){
-                        Simplify::Vertex v;
+                        Simplify::Vertex v{};
                         v.p.x = xOffset + x;
                         v.p.y = yOffset + y;
                         v.p.z = (rasterData + t * (blockSizeX + 1))[x];
