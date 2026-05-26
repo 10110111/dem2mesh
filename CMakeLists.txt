@@ -8,6 +8,8 @@ RelWithDebInfo MinSizeRel."
       FORCE)
 endif()
 
+set(ENABLE_GEOTIFF ON CACHE BOOL "Enable support for GeoTIFF tags. Requires GDAL.")
+
 # Find OpenMP
 if(APPLE)
     if(CMAKE_C_COMPILER_ID MATCHES "Clang")
@@ -30,7 +32,14 @@ if(APPLE)
 endif()
 
 set (CMAKE_CXX_STANDARD 11)
-find_package(GDAL REQUIRED)
+if(ENABLE_GEOTIFF)
+    find_package(GDAL REQUIRED)
+    add_definitions(-DGDAL_ENABLED=1)
+    include_directories(${GDAL_INCLUDE_DIR})
+else()
+    find_package(TIFF REQUIRED)
+    include_directories(${TIFF_INCLUDE_DIRS})
+endif()
 find_package(OpenMP REQUIRED)
 if(OPENMP_FOUND)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -40,7 +49,6 @@ if(OPENMP_FOUND)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fopenmp")
     endif()
 endif()
-include_directories(${GDAL_INCLUDE_DIR})
 
 # Add compiler options.
 if (NOT WIN32)
@@ -56,6 +64,6 @@ include_directories("vendor/jmeshlib/include")
 # Add exectuteable
 add_executable(${PROJECT_NAME} ${SRC_LIST})
 
-target_link_libraries(${PROJECT_NAME} ${GDAL_LIBRARY} jmeshlib)
+target_link_libraries(${PROJECT_NAME} ${GDAL_LIBRARY} ${TIFF_LIBRARIES} jmeshlib)
 
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)

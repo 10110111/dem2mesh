@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with dem2mesh.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <fstream>
@@ -26,9 +27,15 @@ along with dem2mesh.  If not, see <https://www.gnu.org/licenses/>.
 #include "Logger.h"
 #include "Simplify.h"
 #include "tin.h"
+#include <stdint.h>
 
-#include "gdal_priv.h"
-#include "cpl_conv.h" // for CPLMalloc()
+#ifdef GDAL_ENABLED
+# include "gdal_priv.h"
+# include "cpl_conv.h" // for CPLMalloc()
+#else
+# include <tiffio.h>
+constexpr float nodata = -1e38;
+#endif
 
 Logger logWriter;
 
@@ -123,11 +130,17 @@ Point2D geoLoc(float xloc, float yloc, double *affine){
     return Point2D(affine[0] + xloc*affine[1] + yloc*affine[2], affine[3] + xloc*affine[4] + yloc*affine[5]);
 }
 
+#ifdef GDAL_ENABLED
 BoundingBox getExtent(GDALDataset *dataset){
     double affine[6];
     dataset->GetGeoTransform(affine);
     return BoundingBox(geoLoc(0, dataset->GetRasterYSize(), affine), geoLoc(dataset->GetRasterXSize(), 0, affine));
 }
+#else
+BoundingBox getExtent(double width, double height){
+    return BoundingBox({width, height}, {0,0});
+}
+#endif
 
 void writePly(const std::string &filename, int thread){
     // Start writing ply file
@@ -397,11 +410,16 @@ int main(int argc, char **argv) {
     logWriter.outputFile = NULL;
     logArgs(params, logWriter);
 
+#ifdef GDAL_ENABLED
     GDALDataset  *dataset;
     GDALAllRegister();
     dataset = (GDALDataset *) GDALOpen( InputFile.value, GA_ReadOnly );
+#else
+    TIFF*const dataset = TIFFOpen(InputFile.value, "r");
+#endif
     if( dataset != NULL )
     {
+#ifdef GDAL_ENABLED
         arr_width = dataset->GetRasterXSize();
         arr_height = dataset->GetRasterYSize();
 
@@ -411,14 +429,59 @@ int main(int argc, char **argv) {
         logWriter("Extent is (%f, %f), (%f, %f)\n", extent.min.x, extent.max.x, extent.min.y, extent.max.y);
 
         GDALRasterBand *band = dataset->GetRasterBand(BandNum.value);
+#else
+        if(!TIFFGetFieldDefaulted(dataset, TIFFTAG_IMAGEWIDTH, &arr_width) ||
+           !TIFFGetFieldDefaulted(dataset, TIFFTAG_IMAGELENGTH, &arr_height))
+        {
+            std::cerr << "Failed to get image dimensions\n";
+            return 1;
+        }
+        uint16_t format = 0, bitsPerSample = 0, samplesPerPixel = 0;
+        if(!TIFFGetFieldDefaulted(dataset, TIFFTAG_SAMPLEFORMAT, &format))
+        {
+            std::cerr << "Failed to get image sample format\n";
+            return 1;
+        }
+        if(!TIFFGetFieldDefaulted(dataset, TIFFTAG_BITSPERSAMPLE, &bitsPerSample))
+        {
+            std::cerr << "Failed to get image bits per sample\n";
+            return 1;
+        }
+        if(!TIFFGetFieldDefaulted(dataset, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel))
+        {
+            std::cerr << "Failed to get image samples per pixel\n";
+            return 1;
+        }
+        if(format != SAMPLEFORMAT_IEEEFP || bitsPerSample != 32)
+        {
+            std::string formatName;
+            if(format == SAMPLEFORMAT_UINT)
+                formatName = "uint" + std::to_string(bitsPerSample);
+            else if(format == SAMPLEFORMAT_INT)
+                formatName = "int" + std::to_string(bitsPerSample);
+            else if(format == SAMPLEFORMAT_IEEEFP)
+                formatName = "float" + std::to_string(bitsPerSample);
+            else
+                formatName = "format"+std::to_string(format) + ", " + std::to_string(bitsPerSample) + " bps";
+            std::cerr << "Unsupported image format, size, or structure: expected is float32, instead got "
+                      << formatName << "\n";
+            return 1;
+        }
+        logWriter("Raster Size is %dx%d\n", arr_width, arr_height);
+        extent = getExtent(arr_width, arr_height);
+        const auto scanLineSize = TIFFScanlineSize(dataset);
+        std::vector<float> scanLine((scanLineSize + sizeof scanLine[0] - 1) / sizeof scanLine[0]);
+#endif
 
-        int hasNoData = FALSE;
+        int hasNoData = false;
+#ifdef GDAL_ENABLED
         double nodata = band->GetNoDataValue(&hasNoData);
 
         if (hasNoData){
             logWriter("NoData value: %.18g\n", nodata);
         }
         logWriter("Description: %s\n", band->GetDescription());
+#endif
 
         unsigned long long int vertex_count = static_cast<unsigned long long int>(arr_height) *
                                               static_cast<unsigned long long int>(arr_width);
@@ -472,11 +535,30 @@ int main(int argc, char **argv) {
                 for (int y = 0; y < blockSizeY + blockYPad; y++){
 
                     omp_set_lock(&readLock);
+#ifdef GDAL_ENABLED
                     if (band->RasterIO( GF_Read, xOffset, yOffset + y, blockSizeX + blockXPad, 1,
                                         rasterData + t * (blockSizeX + 1), blockSizeX + blockXPad, 1, GDT_Float32, 0, 0 ) == CE_Failure){
                         std::cerr << "Cannot access raster data" << std::endl;
                         exit(EXIT_FAILURE);
                     }
+#else
+                    if(!TIFFReadScanline(dataset, scanLine.data(), yOffset + y))
+                    {
+                        std::cerr << "Failed to read scanline " << yOffset + y << "\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    if(samplesPerPixel > 1)
+                    {
+                        for(int n = 0; n < arr_width; ++n)
+                            scanLine[n] = scanLine[n * samplesPerPixel];
+                    }
+                    if(size_t(xOffset + blockSizeX + blockXPad) > scanLine.size() / samplesPerPixel)
+                    {
+                        std::cerr << "IO error: Attempt to access too large offset into the scanline detected\n";
+                        exit(EXIT_FAILURE);
+                    }
+                    std::copy_n(scanLine.data() + xOffset, blockSizeX + blockXPad, rasterData + t * (blockSizeX + 1));
+#endif
                     omp_unset_lock(&readLock);
 
                     for (int x = 0; x < blockSizeX + blockXPad; x++){
@@ -558,7 +640,9 @@ int main(int argc, char **argv) {
         }
 
         delete[] rasterData;
+#ifdef GDAL_ENABLED
         GDALClose(dataset);
+#endif
 
         if (qtreeLevels > 0){
             // Merge
