@@ -288,10 +288,10 @@ namespace Simplify
 
     // Helper functions
     double vertex_error(SymetricMatrix q, double x, double y, double z);
-    double calculate_error(int id_v1, int id_v2, vec3f &p_result, int thread);
+    double calculate_error(int id_v1, int id_v2, bool move_by_quadric, vec3f &p_result, int thread);
     bool flipped(vec3f p,int i1,const Vertex &v0,std::vector<int> &deleted,int thread);
-    void update_triangles(int i0,const Vertex &v,const std::vector<int> &deleted,int &deleted_triangles, int thread);
-    void update_mesh(int iteration, int thread);
+    void update_triangles(int i0,const Vertex &v, bool move_by_quadric,const std::vector<int> &deleted,int &deleted_triangles, int thread);
+    void update_mesh(int iteration, bool move_by_quadric, int thread);
     void compact_mesh(int thread);
 
     void allocate(int numThreads){
@@ -317,7 +317,7 @@ namespace Simplify
     //                 more iterations yield higher quality
     //
 
-    void simplify_mesh(int target_count, double agressiveness, bool verbose, int thread)
+    void simplify_mesh(int target_count, double agressiveness, bool move_by_quadric, bool verbose, int thread)
     {
         // init
 //        loopi(0,triangles.size())
@@ -345,7 +345,7 @@ namespace Simplify
             // update mesh once in a while
             if(iteration%5==0)
             {
-                update_mesh(iteration, thread);
+                update_mesh(iteration, move_by_quadric, thread);
             }
 
             // clear dirty flag
@@ -375,7 +375,7 @@ namespace Simplify
 
                     // Compute vertex to collapse to
                     vec3f p;
-                    calculate_error(i0,i1,p,thread);
+                    calculate_error(i0,i1,move_by_quadric,p,thread);
                     deleted0.resize(v0.tcount); // normals temporarily
                     deleted1.resize(v1.tcount); // normals temporarily
                     // dont remove if flipped
@@ -388,8 +388,8 @@ namespace Simplify
                     v0.q=v1.q+v0.q;
                     int tstart=refs[thread]->size();
 
-                    update_triangles(i0,v0,deleted0,deleted_triangles,thread);
-                    update_triangles(i0,v1,deleted1,deleted_triangles,thread);
+                    update_triangles(i0,v0,move_by_quadric,deleted0,deleted_triangles,thread);
+                    update_triangles(i0,v1,move_by_quadric,deleted1,deleted_triangles,thread);
 
                     int tcount=refs[thread]->size()-tstart;
 
@@ -450,7 +450,7 @@ namespace Simplify
 
     // Update triangle connections and edge error after a edge is collapsed
 
-    void update_triangles(int i0,const Vertex &v,const std::vector<int> &deleted,int &deleted_triangles, int thread)
+    void update_triangles(int i0,const Vertex &v,bool move_by_quadric,const std::vector<int> &deleted,int &deleted_triangles, int thread)
     {
         vec3f p;
         loopk(0,v.tcount)
@@ -467,9 +467,9 @@ namespace Simplify
             }
             t.v[r.tvertex]=i0;
             t.dirty=1;
-            t.err[0]=calculate_error(t.v[0],t.v[1],p,thread);
-            t.err[1]=calculate_error(t.v[1],t.v[2],p,thread);
-            t.err[2]=calculate_error(t.v[2],t.v[0],p,thread);
+            t.err[0]=calculate_error(t.v[0],t.v[1],move_by_quadric,p,thread);
+            t.err[1]=calculate_error(t.v[1],t.v[2],move_by_quadric,p,thread);
+            t.err[2]=calculate_error(t.v[2],t.v[0],move_by_quadric,p,thread);
             t.err[3]=min(t.err[0],min(t.err[1],t.err[2]));
             refs[thread]->push_back(r);
         }
@@ -477,7 +477,7 @@ namespace Simplify
 
     // compact triangles, compute edge error and build reference list
 
-    void update_mesh(int iteration, int thread)
+    void update_mesh(int iteration, bool move_by_quadric, int thread)
     {
         auto& tris = *triangles[thread];
         if(iteration>0) // compact triangles
@@ -518,7 +518,7 @@ namespace Simplify
             {
                 // Calc Edge Error
                 Triangle &t=tris[i];vec3f p;
-                loopj(0,3) t.err[j]=calculate_error(t.v[j],t.v[(j+1)%3],p,thread);
+                loopj(0,3) t.err[j]=calculate_error(t.v[j],t.v[(j+1)%3],move_by_quadric,p,thread);
                 t.err[3]=min(t.err[0],min(t.err[1],t.err[2]));
             }
         }
@@ -640,7 +640,7 @@ namespace Simplify
 
     // Error for one edge
 
-    double calculate_error(int id_v1, int id_v2, vec3f &p_result, int thread)
+    double calculate_error(int id_v1, int id_v2, bool move_by_quadric, vec3f &p_result, int thread)
     {
         // compute interpolated vertex
 
@@ -650,7 +650,7 @@ namespace Simplify
         bool   border = v1.border & v2.border;
         double error=0;
         double det = q.det(0, 1, 2, 1, 4, 5, 2, 5, 7);
-        if ( det != 0 && !border )
+        if ( move_by_quadric && det != 0 && !border )
         {
 
             // q_delta is invertible

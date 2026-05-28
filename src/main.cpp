@@ -88,6 +88,7 @@ cmdLineParameter< float >
     EdgeSwapThreshold ( "edgeSwapThreshold" );
 cmdLineReadable
     Rtc ( "rtc" ),
+    NoMoveByQuadric( "noMovePointsByQuadric" ),
     Verbose( "verbose" );
 
 cmdLineReadable* params[] = {
@@ -95,6 +96,7 @@ cmdLineReadable* params[] = {
     &MaxVertexCount , &MaxTileLength, &Aggressiveness, &BandNum, &MaxConcurrency,
     &EdgeSwapThreshold,
     &Rtc, &Verbose ,
+    &NoMoveByQuadric,
     NULL
 };
 
@@ -108,6 +110,7 @@ void help(char *ex){
               << "\t [-" << BandNum.name << " <Band number> (Default: 1)]" << std::endl
               << "\t [-" << MaxConcurrency.name << " <threads> (Default: all cpus)]" << std::endl
               << "\t [-" << EdgeSwapThreshold.name << " <dot product threshold (between 0-1) to perform edge collapses. Performing edge collapses can violate the 2.5D constraints, but leads to better triangles for vertical structures> (Default: disabled)]" << std::endl
+              << "\t [-" << NoMoveByQuadric.name << " (perform manual minimization along edges instaed of moving points by a quadric - can avoid failure to simplify in some regions)]" << std::endl
               << "\t [-" << Rtc.name << "]" << std::endl
               << "\t [-" << Verbose.name << "]" << std::endl;
     exit(EXIT_FAILURE);
@@ -366,7 +369,7 @@ void simplify(int target_count, int thread){
         return;
     }
 
-    Simplify::simplify_mesh(target_count, static_cast<double>(Aggressiveness.value), Verbose.set, thread);
+    Simplify::simplify_mesh(target_count, static_cast<double>(Aggressiveness.value), !NoMoveByQuadric.set, Verbose.set, thread);
     if ( Simplify::triangles[thread]->size() >= start_size) {
         logWriter("Unable to reduce mesh. We tried!\n");
     }
