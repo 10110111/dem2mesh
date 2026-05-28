@@ -89,6 +89,7 @@ cmdLineParameter< float >
 cmdLineReadable
     Rtc ( "rtc" ),
     NoMoveByQuadric( "noMovePointsByQuadric" ),
+    FreezeCorners( "freezeCorners" ),
     Verbose( "verbose" );
 
 cmdLineReadable* params[] = {
@@ -97,6 +98,7 @@ cmdLineReadable* params[] = {
     &EdgeSwapThreshold,
     &Rtc, &Verbose ,
     &NoMoveByQuadric,
+    &FreezeCorners,
     NULL
 };
 
@@ -111,6 +113,7 @@ void help(char *ex){
               << "\t [-" << MaxConcurrency.name << " <threads> (Default: all cpus)]" << std::endl
               << "\t [-" << EdgeSwapThreshold.name << " <dot product threshold (between 0-1) to perform edge collapses. Performing edge collapses can violate the 2.5D constraints, but leads to better triangles for vertical structures> (Default: disabled)]" << std::endl
               << "\t [-" << NoMoveByQuadric.name << " (perform manual minimization along edges instaed of moving points by a quadric - can avoid failure to simplify in some regions)]" << std::endl
+              << "\t [-" << FreezeCorners.name << " (try hard to avoid moving the vertices at the corners of the input image)]" << std::endl
               << "\t [-" << Rtc.name << "]" << std::endl
               << "\t [-" << Verbose.name << "]" << std::endl;
     exit(EXIT_FAILURE);
@@ -521,6 +524,16 @@ int main(int argc, char **argv) {
         omp_lock_t readLock;
         omp_init_lock(&readLock);
 
+        constexpr double corner1marker = -1e30f;
+        constexpr double corner2marker = -2e30f;
+        constexpr double corner3marker = -3e30f;
+        constexpr double corner4marker = -4e30f;
+
+        double corner1val = 0;
+        double corner2val = 0;
+        double corner3val = 0;
+        double corner4val = 0;
+
         #pragma omp parallel for collapse(2)
         for (int blockX = 0; blockX < subdivisions; blockX++){
             for (int blockY = 0; blockY < subdivisions; blockY++){
@@ -569,6 +582,30 @@ int main(int argc, char **argv) {
                         v.p.x = xOffset + x;
                         v.p.y = yOffset + y;
                         v.p.z = (rasterData + t * (blockSizeX + 1))[x];
+
+                        if (FreezeCorners.set)
+                        {
+                            if (x == 0 && y == 0)
+                            {
+                                corner1val = v.p.z;
+                                v.p.z = corner1marker;
+                            }
+                            else if (x == 0 && y + yOffset == arr_height - 1)
+                            {
+                                corner2val = v.p.z;
+                                v.p.z = corner2marker;
+                            }
+                            else if (x + xOffset == arr_width - 1 && y == 0)
+                            {
+                                corner3val = v.p.z;
+                                v.p.z = corner3marker;
+                            }
+                            else if (x + xOffset == arr_width - 1 && y + yOffset == arr_height - 1)
+                            {
+                                corner4val = v.p.z;
+                                v.p.z = corner4marker;
+                            }
+                        }
 
                         Simplify::vertices[t]->push_back(v);
                     }
@@ -631,6 +668,16 @@ int main(int argc, char **argv) {
                 if (qtreeLevels == 0){
                     transform(extent, t);
                     logWriter("Single quad tree level, saving to PLY\n");
+                    if (FreezeCorners.set)
+                    {
+                        for(auto& v : *Simplify::vertices[t])
+                        {
+                            if (v.p.z == corner1marker) v.p.z = corner1val;
+                            if (v.p.z == corner2marker) v.p.z = corner2val;
+                            if (v.p.z == corner3marker) v.p.z = corner3val;
+                            if (v.p.z == corner4marker) v.p.z = corner4val;
+                        }
+                    }
                     saveFinal(OutputFile.value, t, EdgeSwapThreshold.value);
                 }else{
                     logWriter("Writing to binary file...");
@@ -678,6 +725,16 @@ int main(int argc, char **argv) {
             int target_count = std::min(MaxVertexCount.value * 2, static_cast<int>(Simplify::triangles[0]->size()));
             simplify(target_count, 0);
             transform(extent, 0);
+            if (FreezeCorners.set)
+            {
+                for(auto& v : *Simplify::vertices[0])
+                {
+                    if (v.p.z == corner1marker) v.p.z = corner1val;
+                    if (v.p.z == corner2marker) v.p.z = corner2val;
+                    if (v.p.z == corner3marker) v.p.z = corner3val;
+                    if (v.p.z == corner4marker) v.p.z = corner4val;
+                }
+            }
             saveFinal(OutputFile.value, 0, EdgeSwapThreshold.value);
         }
 
