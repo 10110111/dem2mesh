@@ -665,14 +665,20 @@ namespace Simplify
             // det = 0 -> try to find best result
             vec3f p1=v1.p;
             vec3f p2=v2.p;
-            vec3f p3=(p1+p2)/2;
+            vec3f p3=(p1*0.25+p2*0.75);
+            vec3f p4=(p1+p2)/2;
+            vec3f p5=(p1*0.75+p2*0.25);
             double error1 = vertex_error(q, p1.x,p1.y,p1.z);
             double error2 = vertex_error(q, p2.x,p2.y,p2.z);
             double error3 = vertex_error(q, p3.x,p3.y,p3.z);
-            error = min(error1, min(error2, error3));
+            double error4 = vertex_error(q, p4.x,p4.y,p4.z);
+            double error5 = vertex_error(q, p5.x,p5.y,p5.z);
+            error = std::min({error1, error2, error3, error4, error5});
             if (error1 == error) p_result=p1;
             if (error2 == error) p_result=p2;
             if (error3 == error) p_result=p3;
+            if (error4 == error) p_result=p4;
+            if (error5 == error) p_result=p5;
         }
         return error;
     }
