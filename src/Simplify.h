@@ -78,15 +78,15 @@ struct vec3f
     }
 };
 
-class SymetricMatrix {
+class SymmetricMatrix {
 
     public:
 
     // Constructor
 
-    SymetricMatrix(double c=0) { loopi(0,10) m[i] = c;  }
+    SymmetricMatrix(double c=0) { loopi(0,10) m[i] = c;  }
 
-    SymetricMatrix(    double m11, double m12, double m13, double m14,
+    SymmetricMatrix(    double m11, double m12, double m13, double m14,
                         double m22, double m23, double m24,
                                     double m33, double m34,
                                                 double m44) {
@@ -98,7 +98,7 @@ class SymetricMatrix {
 
     // Make plane
 
-    SymetricMatrix(double a,double b,double c,double d)
+    SymmetricMatrix(double a,double b,double c,double d)
     {
         m[0] = a*a;  m[1] = a*b;  m[2] = a*c;  m[3] = a*d;
                      m[4] = b*b;  m[5] = b*c;  m[6] = b*d;
@@ -119,15 +119,15 @@ class SymetricMatrix {
         return det;
     }
 
-    const SymetricMatrix operator+(const SymetricMatrix& n) const
+    const SymmetricMatrix operator+(const SymmetricMatrix& n) const
     {
-        return SymetricMatrix( m[0]+n[0],   m[1]+n[1],   m[2]+n[2],   m[3]+n[3],
+        return SymmetricMatrix( m[0]+n[0],   m[1]+n[1],   m[2]+n[2],   m[3]+n[3],
                                             m[4]+n[4],   m[5]+n[5],   m[6]+n[6],
                                                          m[ 7]+n[ 7], m[ 8]+n[8 ],
                                                                       m[ 9]+n[9 ]);
     }
 
-    SymetricMatrix& operator+=(const SymetricMatrix& n)
+    SymmetricMatrix& operator+=(const SymmetricMatrix& n)
     {
          m[0]+=n[0];   m[1]+=n[1];   m[2]+=n[2];   m[3]+=n[3];
          m[4]+=n[4];   m[5]+=n[5];   m[6]+=n[6];   m[7]+=n[7];
@@ -143,14 +143,14 @@ namespace Simplify
 {
     // Global Variables & Strctures
     struct Triangle { int v[3];double err[4];int8_t deleted,dirty;vec3f n; };
-    struct Vertex { vec3f p;int tstart,tcount;SymetricMatrix q;int8_t border;};
+    struct Vertex { vec3f p;int tstart,tcount;SymmetricMatrix q;int8_t border;};
     struct Ref { int tid,tvertex; };
     std::vector<std::vector<Triangle> *> triangles;
     std::vector<std::vector<Vertex> *> vertices;
     std::vector<std::vector<Ref> *> refs;
 
     // Helper functions
-    double vertex_error(SymetricMatrix q, double x, double y, double z);
+    double vertex_error(SymmetricMatrix q, double x, double y, double z);
     double calculate_error(int id_v1, int id_v2, bool move_by_quadric, vec3f &p_result, int thread);
     bool flipped(vec3f p,int i1,const Vertex &v0,std::vector<int> &deleted,int thread);
     void update_triangles(int i0,const Vertex &v, bool move_by_quadric,const std::vector<int> &deleted,int &deleted_triangles, int thread);
@@ -358,7 +358,7 @@ namespace Simplify
         if( iteration == 0 )
         {
             loopi(0,verts.size())
-                verts[i].q=SymetricMatrix(0.0);
+                verts[i].q=SymmetricMatrix(0.0);
 
             loopi(0,tris.size())
             {
@@ -369,7 +369,7 @@ namespace Simplify
                 n.normalize();
                 t.n=n;
                 loopj(0,3) verts[t.v[j]].q =
-                    verts[t.v[j]].q+SymetricMatrix(n.x,n.y,n.z,-n.dot(p[0]));
+                    verts[t.v[j]].q+SymmetricMatrix(n.x,n.y,n.z,-n.dot(p[0]));
             }
             loopi(0,tris.size())
             {
@@ -489,7 +489,7 @@ namespace Simplify
 
     // Error between vertex and Quadric
 
-    double vertex_error(SymetricMatrix q, double x, double y, double z)
+    double vertex_error(SymmetricMatrix q, double x, double y, double z)
     {
          return   q[0]*x*x + 2*q[1]*x*y + 2*q[2]*x*z + 2*q[3]*x + q[4]*y*y
               + 2*q[5]*y*z + 2*q[6]*y + q[7]*z*z + 2*q[8]*z + q[9];
@@ -503,7 +503,7 @@ namespace Simplify
 
         const auto& v1 = (*vertices[thread])[id_v1];
         const auto& v2 = (*vertices[thread])[id_v2];
-        SymetricMatrix q = v1.q + v2.q;
+        SymmetricMatrix q = v1.q + v2.q;
         bool   border = v1.border & v2.border;
         double error=0;
         double det = q.det(0, 1, 2, 1, 4, 5, 2, 5, 7);
