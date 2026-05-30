@@ -11,43 +11,22 @@
 //
 // 5/2016: Chris Rorden created minimal version for OSX/Linux/Windows compile
 
-//#include <iostream>
-//#include <stddef.h>
-//#include <functional>
-//#include <sys/stat.h>
-//#include <stdbool.h>
 #include <string.h>
-//#include <ctype.h>
-//#include <float.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <map>
 #include <vector>
-#include <string>
 #include <math.h>
-#include <float.h> //FLT_EPSILON, DBL_EPSILON
+#include <algorithm>
 
-#define loopi(start_l,end_l) for ( int i=start_l;i<int(end_l);++i )
 #define loopi(start_l,end_l) for ( int i=start_l;i<int(end_l);++i )
 #define loopj(start_l,end_l) for ( int j=start_l;j<int(end_l);++j )
 #define loopk(start_l,end_l) for ( int k=start_l;k<int(end_l);++k )
-
-struct vector3
-{
-double x, y, z;
-};
 
 struct vec3f
 {
     double x, y, z;
 
     inline vec3f( void ) {}
-
-    //inline vec3f operator =( vector3 a )
-    // { vec3f b ; b.x = a.x; b.y = a.y; b.z = a.z; return b;}
-
-    inline vec3f( vector3 a )
-     { x = a.x; y = a.y; z = a.z; }
 
     inline vec3f( const vec3f& a )
      { x = a.x; y = a.y; z = a.z; }
@@ -66,12 +45,6 @@ struct vec3f
 
     inline vec3f operator * ( const vec3f a ) const
     { return vec3f( x * a.x, y * a.y, z * a.z ); }
-
-    inline vec3f v3 () const
-    { return vec3f( x , y, z ); }
-
-    inline vec3f operator = ( const vector3& a )
-    { x=a.x;y=a.y;z=a.z;return *this; }
 
     inline vec3f operator = ( const vec3f& a )
     { x=a.x;y=a.y;z=a.z;return *this; }
@@ -96,90 +69,6 @@ struct vec3f
         return *this;
     }
 
-    inline double angle( const vec3f& v )
-    {
-        vec3f a = v , b = *this;
-        double dot = v.x*x + v.y*y + v.z*z;
-        double len = a.length() * b.length();
-        if(len==0)len=0.00001f;
-        double input = dot  / len;
-        if (input<-1) input=-1;
-        if (input>1) input=1;
-        return (double) acos ( input );
-    }
-
-    inline double angle2( const vec3f& v , const vec3f& w )
-    {
-        vec3f a = v , b= *this;
-        double dot = a.x*b.x + a.y*b.y + a.z*b.z;
-        double len = a.length() * b.length();
-        if(len==0)len=1;
-
-        vec3f plane; plane.cross( b,w );
-
-        if ( plane.x * a.x + plane.y * a.y + plane.z * a.z > 0 )
-            return (double) -acos ( dot  / len );
-
-        return (double) acos ( dot  / len );
-    }
-
-    inline vec3f rot_x( double a )
-    {
-        double yy = cos ( a ) * y + sin ( a ) * z;
-        double zz = cos ( a ) * z - sin ( a ) * y;
-        y = yy; z = zz;
-        return *this;
-    }
-    inline vec3f rot_y( double a )
-    {
-        double xx = cos ( -a ) * x + sin ( -a ) * z;
-        double zz = cos ( -a ) * z - sin ( -a ) * x;
-        x = xx; z = zz;
-        return *this;
-    }
-    inline void clamp( double min, double max )
-    {
-        if (x<min) x=min;
-        if (y<min) y=min;
-        if (z<min) z=min;
-        if (x>max) x=max;
-        if (y>max) y=max;
-        if (z>max) z=max;
-    }
-    inline vec3f rot_z( double a )
-    {
-        double yy = cos ( a ) * y + sin ( a ) * x;
-        double xx = cos ( a ) * x - sin ( a ) * y;
-        y = yy; x = xx;
-        return *this;
-    }
-    inline vec3f invert()
-    {
-        x=-x;y=-y;z=-z;return *this;
-    }
-    inline vec3f frac()
-    {
-        return vec3f(
-            x-double(int(x)),
-            y-double(int(y)),
-            z-double(int(z))
-            );
-    }
-
-    inline vec3f integer()
-    {
-        return vec3f(
-            double(int(x)),
-            double(int(y)),
-            double(int(z))
-            );
-    }
-
-    inline double length() const
-    {
-        return (double)sqrt(x*x + y*y + z*z);
-    }
-
     inline vec3f normalize()
     {
         double square = sqrt(x*x + y*y + z*z);
@@ -187,33 +76,7 @@ struct vec3f
 
         return *this;
     }
-    static vec3f normalize( vec3f a );
-
-    static void random_init();
-    static double random_double();
-    static vec3f random();
-
-    static int random_number;
-
-    double random_double_01(double a){
-        double rnf=a*14.434252+a*364.2343+a*4213.45352+a*2341.43255+a*254341.43535+a*223454341.3523534245+23453.423412;
-        int rni=((int)rnf)%100000;
-        return double(rni)/(100000.0f-1.0f);
-    }
-
-    vec3f random01_fxyz(){
-        x=(double)random_double_01(x);
-        y=(double)random_double_01(y);
-        z=(double)random_double_01(z);
-        return *this;
-    }
-
 };
-
-double min(double v1, double v2) {
-    return fmin(v1,v2);
-}
-
 
 class SymetricMatrix {
 
@@ -319,12 +182,6 @@ namespace Simplify
 
     void simplify_mesh(int target_count, double agressiveness, bool move_by_quadric, bool verbose, int thread)
     {
-        // init
-//        loopi(0,triangles.size())
-//        {
-//            triangles[i].deleted=0;
-//        }
-
         // main iteration loop
         int deleted_triangles=0;
         std::vector<int> deleted0,deleted1;
@@ -470,7 +327,7 @@ namespace Simplify
             t.err[0]=calculate_error(t.v[0],t.v[1],move_by_quadric,p,thread);
             t.err[1]=calculate_error(t.v[1],t.v[2],move_by_quadric,p,thread);
             t.err[2]=calculate_error(t.v[2],t.v[0],move_by_quadric,p,thread);
-            t.err[3]=min(t.err[0],min(t.err[1],t.err[2]));
+            t.err[3]=std::min({t.err[0],t.err[1],t.err[2]});
             refs[thread]->push_back(r);
         }
     }
@@ -519,7 +376,7 @@ namespace Simplify
                 // Calc Edge Error
                 Triangle &t=tris[i];vec3f p;
                 loopj(0,3) t.err[j]=calculate_error(t.v[j],t.v[(j+1)%3],move_by_quadric,p,thread);
-                t.err[3]=min(t.err[0],min(t.err[1],t.err[2]));
+                t.err[3]=std::min({t.err[0],t.err[1],t.err[2]});
             }
         }
 
