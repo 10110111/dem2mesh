@@ -26,7 +26,7 @@ struct vec3f
 {
     double x, y, z;
 
-    inline vec3f( void ) {}
+    inline vec3f() = default;
 
     inline vec3f( const vec3f& a )
      { x = a.x; y = a.y; z = a.z; }
